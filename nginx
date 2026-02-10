@@ -1,0 +1,87 @@
+#############################################
+# Nginx — Reverse Proxy (шпора)
+#############################################
+
+############################
+# 1. Установка Nginx
+############################
+# Debian:
+# apt install nginx -y
+# systemctl start nginx
+# systemctl enable nginx
+#
+# Alpine:
+# apk add nginx
+# rc-service nginx start
+# rc-update add nginx default
+
+############################
+# 2. Где лежит конфиг
+############################
+# Debian:
+# /etc/nginx/sites-available/
+# /etc/nginx/sites-enabled/
+#
+# Alpine:
+# /etc/nginx/http.d/
+
+############################
+# 3. Reverse Proxy конфиг
+############################
+
+server {
+    ############################
+    # Слушаем HTTP
+    ############################
+    listen 80;
+
+    # Принимаем любой hostname
+    server_name _;
+
+    ############################
+    # Основной proxy-блок
+    ############################
+    location / {
+
+        # Куда проксируем запросы
+        # IP или hostname сервера Nextcloud
+        proxy_pass http://NEXTCLOUD_IP;
+
+        ############################
+        # Обязательные proxy-заголовки
+        ############################
+
+        # Передаём оригинальный Host
+        proxy_set_header Host $host;
+
+        # Реальный IP клиента
+        proxy_set_header X-Real-IP $remote_addr;
+
+        # Цепочка прокси (если есть)
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+        # Протокол (http / https)
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        ############################
+        # Тайминги (чтобы не рвало соединение)
+        ############################
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+}
+
+############################
+# 4. Проверка конфига
+############################
+# nginx -t
+
+############################
+# 5. Применение
+############################
+# Debian:
+# systemctl reload nginx
+#
+# Alpine:
+# rc-service nginx reload
