@@ -1,0 +1,67 @@
+version: "3.8"
+
+services:
+  db:
+    image: mariadb:11
+    container_name: nextcloud-db
+    restart: unless-stopped
+    command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
+    environment:
+      # База для Nextcloud
+      MYSQL_DATABASE: nextcloud
+      MYSQL_USER: nextcloud
+      MYSQL_PASSWORD: "dbpassword"
+
+      # Root пароль БД (нужен MariaDB, даже если ты им не пользуешься)
+      MYSQL_ROOT_PASSWORD: "rootpassword"
+
+      TZ: Europe/Tallinn
+    volumes:
+      - db:/var/lib/mysql
+    networks:
+      - cloud
+
+  redis:
+    image: redis:alpine
+    container_name: nextcloud-redis
+    restart: unless-stopped
+    volumes:
+      - redis:/data
+    networks:
+      - cloud
+
+  nextcloud:
+    image: nextcloud:apache
+    container_name: nextcloud
+    restart: unless-stopped
+    depends_on:
+      - db
+      - redis
+    ports:
+      # Nextcloud будет доступен по http://SERVER_IP:8081
+      - "8081:80"
+    environment:
+      TZ: Europe/Tallinn
+
+      # Подключение к MariaDB
+      MYSQL_DATABASE: nextcloud
+      MYSQL_USER: nextcloud
+      MYSQL_PASSWORD: "dbpassword"
+      MYSQL_HOST: db
+
+      # Redis (ускорение и меньше локов)
+      REDIS_HOST: redis
+    volumes:
+      # Все данные Nextcloud в одном месте (проще бэкапить)
+      - nextcloud:/var/www/html
+    networks:
+      - cloud
+
+networks:
+  cloud:
+    driver: bridge
+
+volumes:
+  nextcloud:
+  db:
+  redis:
